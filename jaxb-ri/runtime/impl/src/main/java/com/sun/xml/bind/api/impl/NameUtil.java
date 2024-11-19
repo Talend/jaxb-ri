@@ -11,10 +11,10 @@
 package com.sun.xml.bind.api.impl;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+
+import javax.lang.model.SourceVersion;
 
 /**
  * Methods that convert strings into various formats.
@@ -22,13 +22,18 @@ import java.util.Locale;
  * <p>
  * What JAX-RPC name binding tells us is that even such basic method
  * like "isLetter" can be different depending on the situation.
- *
+ * <p>
  * For this reason, a whole lot of methods are made non-static,
  * even though they look like they should be static.
+ * <p>
+ * TALEND: this class copies behavior of:
+ * - com.sun.xml.bind.api.impl.NameConverter#jaxrpcCompatible
+ * - com.sun.xml.bind.api.impl.NameConverter#smart
  */
 class NameUtil {
     protected boolean isPunct(char c) {
-        return c == '-' || c == '.' || c == ':' || c == '_' || c == '\u00b7' || c == '\u0387' || c == '\u06dd' || c == '\u06de';
+        // talend modification
+        return c == '-' || c == '.' || c == ':' /*|| c == '_'*/ || c == '\u00b7' || c == '\u0387' || c == '\u06dd' || c == '\u06de';
     }
 
     protected static boolean isDigit(char c) {
@@ -44,31 +49,30 @@ class NameUtil {
     }
 
     protected boolean isLetter(char c) {
-        return c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || Character.isLetter(c);
+        // talend modification
+        return c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || Character.isLetter(c) || c == '_';
     }
 
-    private String toLowerCase(String s)
-    {
+    private String toLowerCase(String s) {
         return s.toLowerCase(Locale.ENGLISH);
     }
 
-    private String toUpperCase(char c)
-    {
+    private String toUpperCase(char c) {
         return String.valueOf(c).toUpperCase(Locale.ENGLISH);
     }
-    
-    private String toUpperCase(String s)
-    {
+
+    private String toUpperCase(String s) {
         return s.toUpperCase(Locale.ENGLISH);
     }
-    
+
     /**
      * Capitalizes the first character of the specified string,
      * and de-capitalize the rest of characters.
      */
     public String capitalize(String s) {
-        if (!isLower(s.charAt(0)))
+        if (!isLower(s.charAt(0))) {
             return s;
+        }
         StringBuilder sb = new StringBuilder(s.length());
         sb.append(toUpperCase(s.charAt(0)));
         sb.append(toLowerCase(s.substring(1)));
@@ -82,7 +86,7 @@ class NameUtil {
         char c1 = s.charAt(start);
         int t1 = classify(c1);
 
-        for (int i=start+1; i<n; i++) {
+        for (int i = start + 1; i < n; i++) {
             // shift (c1,t1) into (c0,t0)
             // char c0 = c1;  --- conceptually, but c0 won't be used
             int t0 = t1;
@@ -90,19 +94,22 @@ class NameUtil {
             c1 = s.charAt(i);
             t1 = classify(c1);
 
-            switch(actionTable[t0*5+t1]) {
-            case ACTION_CHECK_PUNCT:
-                if(isPunct(c1)) return i;
-                break;
-            case ACTION_CHECK_C2:
-                if (i < n-1) {
-                    char c2 = s.charAt(i+1);
-                    if (isLower(c2))
+            switch (actionTable[t0 * 5 + t1]) {
+                case ACTION_CHECK_PUNCT:
+                    if (isPunct(c1)) {
                         return i;
-                }
-                break;
-            case ACTION_BREAK:
-                return i;
+                    }
+                    break;
+                case ACTION_CHECK_C2:
+                    if (i < n - 1) {
+                        char c2 = s.charAt(i + 1);
+                        if (isLower(c2)) {
+                            return i;
+                        }
+                    }
+                    break;
+                case ACTION_BREAK:
+                    return i;
             }
         }
         return -1;
@@ -120,7 +127,7 @@ class NameUtil {
      * Look up table for actions.
      * type0*5+type1 would yield the action to be taken.
      */
-    private static final byte[] actionTable = new byte[5*5];
+    private static final byte[] actionTable = new byte[5 * 5];
 
     // action constants. see nextBreak for the meaning
     static private final byte ACTION_CHECK_PUNCT = 0;
@@ -133,41 +140,65 @@ class NameUtil {
      * the classification of the preceding character 't0' and
      * the classification of the next character 't1'.
      */
-    private static byte decideAction( int t0, int t1 ) {
-        if(t0==OTHER && t1==OTHER)  return ACTION_CHECK_PUNCT;
-        if(!xor(t0==DIGIT,t1==DIGIT))  return ACTION_BREAK;
-        if(t0==LOWER_LETTER && t1!=LOWER_LETTER)    return ACTION_BREAK;
-        if(!xor(t0<=OTHER_LETTER,t1<=OTHER_LETTER)) return ACTION_BREAK;
-        if(!xor(t0==OTHER_LETTER,t1==OTHER_LETTER)) return ACTION_BREAK;
+    private static byte decideAction(int t0, int t1) {
+        if (t0 == OTHER && t1 == OTHER) {
+            return ACTION_CHECK_PUNCT;
+        }
+        if (!xor(t0 == DIGIT, t1 == DIGIT)) {
+            return ACTION_BREAK;
+        }
+        if (t0 == LOWER_LETTER && t1 != LOWER_LETTER) {
+            return ACTION_BREAK;
+        }
+        if (!xor(t0 <= OTHER_LETTER, t1 <= OTHER_LETTER)) {
+            return ACTION_BREAK;
+        }
+        if (!xor(t0 == OTHER_LETTER, t1 == OTHER_LETTER)) {
+            return ACTION_BREAK;
+        }
 
-        if(t0==UPPER_LETTER && t1==UPPER_LETTER)    return ACTION_CHECK_C2;
+        if (t0 == UPPER_LETTER && t1 == UPPER_LETTER) {
+            return ACTION_CHECK_C2;
+        }
 
         return ACTION_NOBREAK;
     }
 
-    private static boolean xor(boolean x,boolean y) {
-        return (x&&y) || (!x&&!y);
+    private static boolean xor(boolean x, boolean y) {
+        return (x && y) || (!x && !y);
     }
 
     static {
         // initialize the action table
-        for( int t0=0; t0<5; t0++ )
-            for( int t1=0; t1<5; t1++ )
-                actionTable[t0*5+t1] = decideAction(t0,t1);
+        for (int t0 = 0; t0 < 5; t0++) {
+            for (int t1 = 0; t1 < 5; t1++) {
+                actionTable[t0 * 5 + t1] = decideAction(t0, t1);
+            }
+        }
     }
 
     /**
      * Classify a character into 5 categories that determine the word break.
      */
     protected int classify(char c0) {
-        switch(Character.getType(c0)) {
-        case Character.UPPERCASE_LETTER:        return UPPER_LETTER;
-        case Character.LOWERCASE_LETTER:        return LOWER_LETTER;
-        case Character.TITLECASE_LETTER:
-        case Character.MODIFIER_LETTER:
-        case Character.OTHER_LETTER:            return OTHER_LETTER;
-        case Character.DECIMAL_DIGIT_NUMBER:    return DIGIT;
-        default:                                return OTHER;
+        // talend-modification
+        if (c0 == '_') {
+            return NameUtil.OTHER_LETTER;
+        }
+
+        switch (Character.getType(c0)) {
+            case Character.UPPERCASE_LETTER:
+                return UPPER_LETTER;
+            case Character.LOWERCASE_LETTER:
+                return LOWER_LETTER;
+            case Character.TITLECASE_LETTER:
+            case Character.MODIFIER_LETTER:
+            case Character.OTHER_LETTER:
+                return OTHER_LETTER;
+            case Character.DECIMAL_DIGIT_NUMBER:
+                return DIGIT;
+            default:
+                return OTHER;
         }
     }
 
@@ -184,12 +215,13 @@ class NameUtil {
     public List<String> toWordList(String s) {
         ArrayList<String> ss = new ArrayList<String>();
         int n = s.length();
-        for (int i = 0; i < n;) {
+        for (int i = 0; i < n; ) {
 
             // Skip punctuation
             while (i < n) {
-                if (!isPunct(s.charAt(i)))
+                if (!isPunct(s.charAt(i))) {
                     break;
+                }
                 i++;
             }
             if (i >= n) break;
@@ -198,7 +230,9 @@ class NameUtil {
             int b = nextBreak(s, i);
             String w = (b == -1) ? s.substring(i) : s.substring(i, b);
             ss.add(escape(capitalize(w)));
-            if (b == -1) break;
+            if (b == -1) {
+                break;
+            }
             i = b;
         }
 
@@ -211,25 +245,29 @@ class NameUtil {
 
     protected String toMixedCaseName(List<String> ss, boolean startUpper) {
         StringBuilder sb = new StringBuilder();
-        if(!ss.isEmpty()) {
+        if (!ss.isEmpty()) {
             sb.append(startUpper ? ss.get(0) : toLowerCase(ss.get(0)));
-            for (int i = 1; i < ss.size(); i++)
+            for (int i = 1; i < ss.size(); i++) {
                 sb.append(ss.get(i));
+            }
         }
         return sb.toString();
     }
 
     protected String toMixedCaseVariableName(String[] ss,
-                                                  boolean startUpper,
-                                                  boolean cdrUpper) {
-        if (cdrUpper)
-            for (int i = 1; i < ss.length; i++)
+                                             boolean startUpper,
+                                             boolean cdrUpper) {
+        if (cdrUpper) {
+            for (int i = 1; i < ss.length; i++) {
                 ss[i] = capitalize(ss[i]);
+            }
+        }
         StringBuilder sb = new StringBuilder();
-        if( ss.length>0 ) {
+        if (ss.length > 0) {
             sb.append(startUpper ? ss[0] : toLowerCase(ss[0]));
-            for (int i = 1; i < ss.length; i++)
+            for (int i = 1; i < ss.length; i++) {
                 sb.append(ss[i]);
+            }
         }
         return sb.toString();
     }
@@ -238,9 +276,8 @@ class NameUtil {
     /**
      * Formats a string into "THIS_KIND_OF_FORMAT_ABC_DEF".
      *
-     * @return
-     *      Always return a string but there's no guarantee that
-     *      the generated code is a valid Java identifier.
+     * @return Always return a string but there's no guarantee that
+     * the generated code is a valid Java identifier.
      */
     public String toConstantName(String s) {
         return toConstantName(toWordList(s));
@@ -249,48 +286,55 @@ class NameUtil {
     /**
      * Formats a string into "THIS_KIND_OF_FORMAT_ABC_DEF".
      *
-     * @return
-     *      Always return a string but there's no guarantee that
-     *      the generated code is a valid Java identifier.
+     * @return Always return a string but there's no guarantee that
+     * the generated code is a valid Java identifier.
      */
     public String toConstantName(List<String> ss) {
         StringBuilder sb = new StringBuilder();
-        if( !ss.isEmpty() ) {
+        if (!ss.isEmpty()) {
             sb.append(toUpperCase(ss.get(0)));
             for (int i = 1; i < ss.size(); i++) {
                 sb.append('_');
                 sb.append(toUpperCase(ss.get(i)));
             }
         }
-        return sb.toString();
-    }
 
+        // talend modification
+        String name = sb.toString();
+        if (!SourceVersion.isKeyword(name)) {
+            return name;
+        } else {
+            return '_' + name;
+        }
+    }
 
 
     /**
      * Escapes characters is the given string so that they can be
      * printed by only using US-ASCII characters.
-     *
+     * <p>
      * The escaped characters will be appended to the given
      * StringBuffer.
      *
-     * @param sb
-     *      StringBuffer that receives escaped string.
-     * @param s
-     *      String to be escaped. <code>s.substring(start)</code>
-     *      will be escaped and copied to the string buffer.
+     * @param sb StringBuffer that receives escaped string.
+     * @param s  String to be escaped. <code>s.substring(start)</code>
+     *           will be escaped and copied to the string buffer.
      */
     public static void escape(StringBuilder sb, String s, int start) {
         int n = s.length();
         for (int i = start; i < n; i++) {
             char c = s.charAt(i);
-            if (Character.isJavaIdentifierPart(c))
+            if (Character.isJavaIdentifierPart(c)) {
                 sb.append(c);
-            else {
+            } else {
                 sb.append('_');
-                if (c <= '\u000f') sb.append("000");
-                else if (c <= '\u00ff') sb.append("00");
-                else if (c <= '\u0fff') sb.append('0');
+                if (c <= '\u000f') {
+                    sb.append("000");
+                } else if (c <= '\u00ff') {
+                    sb.append("00");
+                } else if (c <= '\u0fff') {
+                    sb.append('0');
+                }
                 sb.append(Integer.toString(c, 16));
             }
         }
@@ -302,12 +346,13 @@ class NameUtil {
      */
     private static String escape(String s) {
         int n = s.length();
-        for (int i = 0; i < n; i++)
+        for (int i = 0; i < n; i++) {
             if (!Character.isJavaIdentifierPart(s.charAt(i))) {
                 StringBuilder sb = new StringBuilder(s.substring(0, i));
                 escape(sb, s, i);
                 return sb.toString();
             }
+        }
         return s;
     }
 }
