@@ -24,6 +24,7 @@
 
     <groupId>org.glassfish.jaxb</groupId>
     <artifactId>jaxb-runtime</artifactId>
+    <version>2.3.9-talend</version>
 
     <packaging>jar</packaging>
     <name>JAXB Runtime</name>
@@ -41,7 +42,109 @@
             --add-opens java.base/java.lang.reflect=org.glassfish.jaxb.runtime
             --add-opens org.glassfish.jaxb.runtime/com.sun.xml.bind.v2.runtime.reflect.opt=java.xml.bind
         </argLine>
+        <codemodel.version>${parent.version}</codemodel.version>
+        <relaxng.version>${parent.version}</relaxng.version>
+        <xsom.version>${parent.version}</xsom.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.glassfish.jaxb</groupId>
+                <artifactId>txw2</artifactId>
+                <version>2.3.9</version>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jaxb</groupId>
+                <artifactId>jaxb-runtime</artifactId>
+                <version>2.3.9</version>
+                <classifier>sources</classifier>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jaxb</groupId>
+                <artifactId>jaxb-xjc</artifactId>
+                <version>2.3.9</version>
+                <classifier>sources</classifier>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jaxb</groupId>
+                <artifactId>jaxb-jxc</artifactId>
+                <version>2.3.9</version>
+                <classifier>sources</classifier>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jaxb</groupId>
+                <artifactId>codemodel</artifactId>
+                <version>2.3.9</version>
+                <classifier>sources</classifier>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jaxb</groupId>
+                <artifactId>txw2</artifactId>
+                <version>2.3.9</version>
+                <classifier>sources</classifier>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jaxb</groupId>
+                <artifactId>xsom</artifactId>
+                <version>2.3.9</version>
+                <classifier>sources</classifier>
+            </dependency>
+            <dependency>
+                <groupId>com.sun.xml.bind</groupId>
+                <artifactId>jaxb-impl</artifactId>
+                <version>2.3.9</version>
+                <classifier>sources</classifier>
+            </dependency>
+            <dependency>
+                <groupId>com.sun.xml.bind</groupId>
+                <artifactId>jaxb-xjc</artifactId>
+                <version>2.3.9</version>
+                <classifier>sources</classifier>
+            </dependency>
+            <dependency>
+                <groupId>com.sun.xml.bind</groupId>
+                <artifactId>jaxb-jxc</artifactId>
+                <version>2.3.9</version>
+                <classifier>sources</classifier>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jaxb</groupId>
+                <artifactId>jaxb-runtime</artifactId>
+                <version>2.3.9</version>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jaxb</groupId>
+                <artifactId>jaxb-xjc</artifactId>
+                <version>2.3.9</version>
+            </dependency>
+            <dependency>
+                <groupId>org.glassfish.jaxb</groupId>
+                <artifactId>jaxb-jxc</artifactId>
+                <version>2.3.9</version>
+            </dependency>
+            <dependency>
+                <groupId>com.sun.xml.bind</groupId>
+                <artifactId>jaxb-impl</artifactId>
+                <version>2.3.9</version>
+            </dependency>
+            <dependency>
+                <groupId>com.sun.xml.bind</groupId>
+                <artifactId>jaxb-xjc</artifactId>
+                <version>2.3.9</version>
+            </dependency>
+            <dependency>
+                <groupId>com.sun.xml.bind</groupId>
+                <artifactId>jaxb-jxc</artifactId>
+                <version>2.3.9</version>
+            </dependency>
+            <dependency>
+                <groupId>com.sun.xml.bind</groupId>
+                <artifactId>jaxb-osgi</artifactId>
+                <version>2.3.9</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <dependency>
@@ -57,6 +160,7 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>txw2</artifactId>
+            <version>2.3.9</version>
         </dependency>
         <dependency>
             <groupId>com.sun.istack</groupId>
@@ -89,6 +193,31 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>unpack-resource</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>unpack</goal>
+                        </goals>
+                        <configuration>
+                            <artifactItems>
+                                <artifactItem>
+                                    <groupId>com.sun.xml.bind.mvn</groupId>
+                                    <artifactId>jaxb-parent</artifactId>
+                                    <version>${parent.version}</version>
+                                    <classifier>resources</classifier>
+                                    <type>zip</type>
+                                    <outputDirectory>${project.build.commonResourcesDirectory}</outputDirectory>
+                                </artifactItem>
+                            </artifactItems>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
